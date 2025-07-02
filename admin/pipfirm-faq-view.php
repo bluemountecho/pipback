@@ -6,45 +6,15 @@ function render_faqs_admin_page() {
     $table = $wpdb->prefix . 'firm_faqs';
     $groups_table = $wpdb->prefix . 'firm_faq_groups';
 
-    if (isset($_POST['faq_nonce']) && wp_verify_nonce($_POST['faq_nonce'], 'save_faq')) {
-        if (!current_user_can('manage_options')) return;
-
-        $title     = sanitize_text_field($_POST['faq_title']);
-        $content   = wp_kses_post($_POST['faq_content']);
-        $group_id  = intval($_POST['group_id']);
-
-        if (!empty($title) && !empty($content) && $group_id > 0) {
-            if (!empty($_POST['faq_id'])) {
-                // EDIT mode
-                $id = intval($_POST['faq_id']);
-                $wpdb->update($table, [
-                    'title'    => $title,
-                    'content'  => $content,
-                    'group_id' => $group_id,
-                ], ['id' => $id]);
-
-                echo '<div class="notice notice-success"><p>FAQ updated successfully.</p></div>';
-            } else {
-                // ADD mode
-                $wpdb->insert($table, [
-                    'title'    => $title,
-                    'content'  => $content,
-                    'group_id' => $group_id,
-                ]);
-                echo '<div class="notice notice-success"><p>FAQ added successfully.</p></div>';
-            }
-        }
-    }
-
     // Load groups for dropdown
     $groups = $wpdb->get_results("SELECT id, title FROM $groups_table ORDER BY title ASC", ARRAY_A);
 
     // Check if we're editing an existing FAQ
-    $is_edit = isset($_GET['faq_action'], $_GET['id']) && $_GET['faq_action'] === 'edit';
+    $is_edit = isset($_POST['faq_action'], $_POST['id']) && $_POST['faq_action'] === 'edit';
     $faq_data = ['id' => '', 'title' => '', 'content' => '', 'group_id' => ''];
 
     if ($is_edit) {
-        $id = intval($_GET['id']);
+        $id = intval($_POST['id']);
         $faq = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id), ARRAY_A);
 
         if ($faq) {
@@ -58,7 +28,8 @@ function render_faqs_admin_page() {
     <div class="wrap">
         <h1><?php echo $is_edit ? 'Edit FAQ' : 'Add FAQ'; ?></h1>
 
-        <form method="post">
+        <form id="save-faq-form" method="post">
+            <input type="hidden" name="action" value="save_faq" />
             <?php wp_nonce_field('save_faq', 'faq_nonce'); ?>
             <?php if ($is_edit): ?>
                 <input type="hidden" name="faq_id" value="<?php echo esc_attr($faq_data['id']); ?>">
@@ -104,40 +75,44 @@ function render_faqs_admin_page() {
                 </tr>
             </table>
             <div style="display: flex; align-items: baseline; gap: 10px;">
-                <?php submit_button($is_edit ? 'Update FAQ' : 'Save FAQ'); ?>
-                <?php if ($is_edit): ?>
-                    <a href="<?php echo esc_url(admin_url('admin.php?page=pipback-firm-faqs')); ?>" class="button">Cancel</a>
-                <?php endif; ?>
+                <button class="button button-primary"><?php echo $is_edit ? 'Update FAQ' : 'Save FAQ'; ?></button>
+                <button type="button" class="button" id="close-edit-faq-modal">Cancel</button>
+                <p id="faq-message" style="margin-top:10px;"></p>
             </div>
         </form>
     </div>
+<script>
+jQuery(function($){
+    $('#close-edit-faq-modal').on('click', function () {
+        $('#edit-faq-modal').fadeOut();
+    })
 
-    <div class="wrap">
-        <h2>All FAQs</h2>
-        <style>
-            .wp-list-table .column-actions {
-                width: 200px;
-                white-space: nowrap;
-                text-align: center;
-                vertical-align: middle;
+    $('#save-faq-form').on('submit', function (e) {
+        e.preventDefault();
+        const form = $(this);
+        const message = $('#faq-message').text('Saving...');
+
+        $.post(ajaxurl, form.serialize(), function(res) {
+            if (res.success) {
+                $('#edit-faq-modal').fadeOut();
+                $.ajax({
+                    url: ajaxurl,
+                    method: 'POST',
+                    data: {
+                        action: 'load_faq_table',
+                    },
+                    success: function (response) {
+                        $('#faq-table-div').html(response);
+                    }
+                });
+            } else {
+                message.css('color', 'red').text(res.data?.message || 'Error.');
             }
-            .wp-list-table .column-title {
-                text-align: center;
-                vertical-align: middle;
-            }
-            .wp-list-table .column-group {
-                text-align: center;
-                vertical-align: middle;
-            }
-        </style>
-        <form method="get">
-            <input type="hidden" name="page" value="pipback-firm-faqs" />
-            <?php
-            $table_list = new Pip_Firm_FAQs_Table();
-            $table_list->prepare_items();
-            $table_list->display();
-            ?>
-        </form>
-    </div>
+        }).fail(function() {
+            message.css('color', 'red').text('AJAX error.');
+        });
+    })
+});
+</script>
     <?php
 }

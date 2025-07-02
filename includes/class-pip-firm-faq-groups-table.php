@@ -47,20 +47,10 @@ class Pip_Firm_FAQ_Groups_Table extends WP_List_Table {
     }
 
     public function column_actions($item) {
-        $edit_url = add_query_arg([
-            'page'       => 'pipback-firm-faq-groups',
-            'edit_group' => $item['id'],
-        ], admin_url('admin.php'));
-
-        $delete_url = add_query_arg([
-            'page'         => 'pipback-firm-faq-groups',
-            'delete_group' => $item['id'],
-        ], admin_url('admin.php'));
-
         return sprintf(
-            '<a href="%s" class="button button-small">Edit</a> <a href="%s" class="button button-small" onclick="return confirm(\'Are you sure you want to delete this group?\')">Delete</a>',
-            esc_url($edit_url),
-            esc_url($delete_url)
+            '<a data-id="%d" class="button button-small button-primary edit-faq-group">Edit</a> <a data-id="%d" class="button button-small delete-faq-group" onclick="return confirm(\'Are you sure you want to delete this FAQ?\')">Delete</a>',
+            $item['id'],
+            $item['id']
         );
     }
 

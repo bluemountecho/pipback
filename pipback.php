@@ -186,8 +186,8 @@ function pipback_register_menu() {
     add_submenu_page('pipback-dashboard', 'Cashback Move Log', 'Cashback Move Log', $view_cashback_move_log_cap, 'cashback-move-log', 'display_cashback_move_log');
     add_submenu_page('pipback-dashboard', 'Partnership Requests', 'Partnership Requests', $view_partnership_requests_cap, 'partnership_requests', 'display_partnership_requests');
     add_submenu_page('pipback-dashboard', 'Trading Tools', 'Trading Tools', $view_tradingtools_cap, 'pipback-tradingtools', 'pipback_tradingtools_page');
-    add_submenu_page('pipback-dashboard', 'Manage FAQs', 'FAQs', 'manage_options', 'pipback-firm-faqs', 'render_faqs_admin_page');
-    add_submenu_page('pipback-dashboard', 'FAQ Groups', 'FAQ Groups', 'manage_options', 'pipback-firm-faq-groups', 'render_faq_groups_admin_page');
+    // add_submenu_page('pipback-dashboard', 'Manage FAQs', 'FAQs', 'manage_options', 'pipback-firm-faqs', 'render_faqs_admin_page');
+    // add_submenu_page('pipback-dashboard', 'FAQ Groups', 'FAQ Groups', 'manage_options', 'pipback-firm-faq-groups', 'render_faq_groups_admin_page');
 }
 
 add_action('init', 'pipback_update_schema_on_init');

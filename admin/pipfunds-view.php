@@ -6,12 +6,233 @@ function pipback_pipfunds_page() {
     $category_table = $wpdb->prefix . 'pipcategories';
     $faq_table = $wpdb->prefix . 'firm_faqs';
 
+    wp_enqueue_editor();
+
     // Fetch all FAQs
     $faqs = $wpdb->get_results("SELECT * FROM $faq_table ORDER BY title ASC");
     // Fetch categories for dropdown
     $categories = $wpdb->get_results("SELECT id, title FROM $category_table ORDER BY title ASC");
     
     $faq_table_list = new Pip_Firm_FAQs_Table();
+    $faq_groups_table = new Pip_Firm_FAQ_Groups_Table();
+?>
+<div id="faq-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:10000; justify-content:center; align-items:center; padding-top:50px;">
+    <div style="background:#fff; padding:20px; width:90%; max-width:900px; max-height:85vh; overflow:auto; border-radius:8px;">
+        <h2>Select FAQs</h2>
+        <form method="get" id="faq-list-table-form">
+            <input type="hidden" name="page" value="pipback-firm-faqs">
+            <button type="button" class="button button-primary" id="add-faq">Add FAQ</button>
+            <div id="faq-table-div" style="margin-bottom: 20px;">
+                <?php $faq_table_list->prepare_items(); ?>
+                <?php $faq_table_list->display(); ?>                
+            </div>
+            <button type="button" class="button button-primary" id="add-faq-group">Add FAQs Group</button>
+            <div id="faq-group-table-div">
+                <?php $faq_groups_table->prepare_items(); ?>
+                <?php $faq_groups_table->display(); ?>                
+            </div>
+
+            <p style="margin-top: 20px;">
+                <button type="button" class="button button-primary" id="apply-selected-faqs">Apply FAQs</button>
+                <button type="button" class="button" id="close-faq-modal">Close</button>
+            </p>
+        </form>
+    </div>
+</div>
+<div id="edit-faq-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:10000; justify-content:center; align-items:center; padding-top:50px;">
+    <div style="background:#fff; padding:20px; width:90%; max-width:900px; max-height:85vh; overflow:auto; border-radius:8px;">
+        <div id="edit-faq-modal-content">
+
+        </div>
+    </div>
+</div>
+<div id="edit-faq-group-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:10000; justify-content:center; align-items:center; padding-top:50px;">
+    <div style="background:#fff; padding:20px; width:90%; max-width:900px; max-height:85vh; overflow:auto; border-radius:8px;">
+        <div id="edit-faq-group-modal-content">
+
+        </div>
+    </div>
+</div>
+<script>
+jQuery(function($){
+    let selectedIds = $('#faq-hidden-values').val().split(',').filter(id => id);
+
+    function refreshCheckboxes() {
+        $('.faq-checkbox').each(function() {
+            const id = $(this).val();
+            $(this).prop('checked', selectedIds.includes(id));
+        });
+    }
+
+    $('.faq-select-field').on('click', function() {
+        refreshCheckboxes();
+        $('#faq-modal').fadeIn();
+    });
+
+    $('#close-faq-modal').on('click', function() {
+        $('#faq-modal').fadeOut();
+    });
+
+    $('#apply-selected-faqs').on('click', function() {
+        let newSelected = [];
+        let newTitles = [];
+        $('#faq-list-table-form input.faq-checkbox:checked').each(function() {
+            newSelected.push($(this).val());
+            newTitles.push($(this).closest('tr').find('td.column-title').text().trim());
+        });
+
+        $('#faq-hidden-values').val(newSelected.join(','));
+        $('.faq-select-field').val(newTitles.join(', '));
+        $('#faq-modal').fadeOut();
+    });
+
+    $('#add-faq').on('click', function () {
+        $('#edit-faq-modal').fadeIn();
+
+        $.ajax({
+            url: ajaxurl,
+            method: 'POST',
+            data: {
+                action: 'load_add_faq_modal',
+            },
+            success: function (response) {
+                $('#edit-faq-modal-content').html(response);
+                
+                if (typeof tinymce !== 'undefined') {
+                    const editorId = 'faq_content';
+
+                    if (tinymce.get(editorId)) {
+                        // Remove if already exists
+                        tinymce.get(editorId).remove();
+                    }
+
+                    tinymce.init({
+                        selector: `#${editorId}`,
+                        menubar: false,
+                        toolbar: 'bold italic underline bullist numlist link unlink',
+                        setup: function (editor) {
+                            // Optional: Add events here
+                        }
+                    });
+                }
+            }
+        });
+    })
+
+    $('#add-faq-group').on('click', function () {
+        $('#edit-faq-group-modal').fadeIn();
+
+        $.ajax({
+            url: ajaxurl,
+            method: 'POST',
+            data: {
+                action: 'load_add_faq_group_modal',
+            },
+            success: function (response) {
+                $('#edit-faq-group-modal-content').html(response);
+            }
+        });
+    })
+
+    $(document).on('click', '.edit-faq', function () {
+        $('#edit-faq-modal').fadeIn();
+
+        $.ajax({
+            url: ajaxurl,
+            method: 'POST',
+            data: {
+                action: 'load_add_faq_modal',
+                faq_action: 'edit',
+                id: $(this).attr('data-id')
+            },
+            success: function (response) {
+                $('#edit-faq-modal-content').html(response);
+                
+                if (typeof tinymce !== 'undefined') {
+                    const editorId = 'faq_content';
+
+                    if (tinymce.get(editorId)) {
+                        // Remove if already exists
+                        tinymce.get(editorId).remove();
+                    }
+
+                    tinymce.init({
+                        selector: `#${editorId}`,
+                        menubar: false,
+                        toolbar: 'bold italic underline bullist numlist link unlink',
+                        setup: function (editor) {
+                            // Optional: Add events here
+                        }
+                    });
+                }
+            }
+        });
+    })
+
+    $(document).on('click', '.edit-faq-group', function () {
+        $('#edit-faq-group-modal').fadeIn();
+
+        $.ajax({
+            url: ajaxurl,
+            method: 'POST',
+            data: {
+                action: 'load_add_faq_group_modal',
+                edit_group: $(this).attr('data-id')
+            },
+            success: function (response) {
+                $('#edit-faq-group-modal-content').html(response);
+            }
+        });
+    })
+
+    $(document).on('click', '.delete-faq', function () {
+        $.ajax({
+            url: ajaxurl,
+            method: 'POST',
+            data: {
+                action: 'delete_faq',
+                id: $(this).attr('data-id')
+            },
+            success: function (response) {
+                $.ajax({
+                    url: ajaxurl,
+                    method: 'POST',
+                    data: {
+                        action: 'load_faq_table',
+                    },
+                    success: function (response) {
+                        $('#faq-table-div').html(response);
+                    }
+                });
+            }
+        });
+    })
+
+    $(document).on('click', '.delete-faq-group', function () {
+        $.ajax({
+            url: ajaxurl,
+            method: 'POST',
+            data: {
+                action: 'delete_faq_group',
+                id: $(this).attr('data-id')
+            },
+            success: function (response) {
+                $.ajax({
+                    url: ajaxurl,
+                    method: 'POST',
+                    data: {
+                        action: 'load_faq_group_table',
+                    },
+                    success: function (response) {
+                        $('#faq-group-table-div').html(response);
+                    }
+                });
+            }
+        });
+    })
+});
+</script>
+<?php
     // Handle form submission
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['pipback_save_fund']) && check_admin_referer('save_pip_fund')) {
         $image_url = '';
@@ -31,7 +252,7 @@ function pipback_pipfunds_page() {
             'review'             => floatval($_POST['review']),
             'description'        => sanitize_textarea_field($_POST['description']),
             'second_description' => sanitize_textarea_field($_POST['second_description']),
-            'faq_ids'            => isset($_POST['faq_ids']) ? implode(',', array_map('intval', $_POST['faq_ids'])) : '',
+            'faq_ids'            => sanitize_text_field($_POST['faq_ids']),
             'link'               => esc_url_raw($_POST['link']),
             'image_link'         => esc_url_raw($image_url),
             'category_id'        => intval($_POST['category_id']),
@@ -73,7 +294,7 @@ function pipback_pipfunds_page() {
                 'review'             => floatval($_POST['review']),
                 'description'        => sanitize_textarea_field($_POST['description']),
                 'second_description' => sanitize_textarea_field($_POST['second_description']),
-                'faq_ids'            => isset($_POST['faq_ids']) ? implode(',', array_map('intval', $_POST['faq_ids'])) : '',
+                'faq_ids'            => sanitize_text_field($_POST['faq_ids']),
                 'link'               => esc_url_raw($_POST['link']),
                 'image_link'         => esc_url_raw($image_url),
                 'category_id'        => intval($_POST['category_id']),
@@ -157,21 +378,7 @@ function pipback_pipfunds_page() {
                                     foreach ($faqs as $f) if ($f->id == $id) return $f->title;
                                     return '';
                                 }, explode(',', $fund['faq_ids']))) ); ?>" />
-                            <input type="hidden" name="faq_ids[]" id="faq-hidden-values" value="<?php echo esc_attr($fund['faq_ids']); ?>">
-                            <div id="faq-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; justify-content:center; align-items:center; padding-top:50px;">
-                                <div style="background:#fff; padding:20px; width:90%; max-width:900px; max-height:85vh; overflow:auto; border-radius:8px;">
-                                    <h2>Select FAQs</h2>
-                                    <form method="get" id="faq-list-table-form">
-                                        <input type="hidden" name="page" value="pipback-firm-faqs">
-                                        <?php $faq_table_list->prepare_items(); ?>
-                                        <?php $faq_table_list->display(); ?>
-                                        <p style="margin-top: 10px;">
-                                            <button type="button" class="button button-primary" id="apply-selected-faqs">Apply FAQs</button>
-                                            <button type="button" class="button" id="close-faq-modal">Close</button>
-                                        </p>
-                                    </form>
-                                </div>
-                            </div>
+                            <input type="hidden" name="faq_ids" id="faq-hidden-values" value="<?php echo esc_attr($fund['faq_ids']); ?>">
                             <p class="description">Click to select or add FAQs</p>
                         </td>
                     </tr>
@@ -186,41 +393,6 @@ function pipback_pipfunds_page() {
                 </p>
             </form>
         </div>
-
-        <script>
-        jQuery(function($){
-            let selectedIds = $('#faq-hidden-values').val().split(',').filter(id => id);
-
-            function refreshCheckboxes() {
-                $('.faq-checkbox').each(function() {
-                    const id = $(this).val();
-                    $(this).prop('checked', selectedIds.includes(id));
-                });
-            }
-
-            $('.faq-select-field').on('click', function() {
-                refreshCheckboxes();
-                $('#faq-modal').fadeIn();
-            });
-
-            $('#close-faq-modal').on('click', function() {
-                $('#faq-modal').fadeOut();
-            });
-
-            $('#apply-selected-faqs').on('click', function() {
-                let newSelected = [];
-                let newTitles = [];
-                $('#faq-list-table-form input.faq-checkbox:checked').each(function() {
-                    newSelected.push($(this).val());
-                    newTitles.push($(this).closest('tr').find('td.column-title').text().trim());
-                });
-
-                $('#faq-hidden-values').val(newSelected.join(','));
-                $('.faq-select-field').val(newTitles.join(', '));
-                $('#faq-modal').fadeOut();
-            });
-        });
-        </script>
         <?php
         
         return;
@@ -303,14 +475,9 @@ function pipback_pipfunds_page() {
                     <tr>
                         <th><label for="faq_ids">FAQs</label></th>
                         <td>
-                            <select name="faq_ids[]" class="faq-select2" multiple="multiple" style="width: 100%;">
-                                <?php foreach ($faqs as $faq): ?>
-                                    <option value="<?php echo esc_attr($faq->id); ?>">
-                                        <?php echo esc_html($faq->title); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <p class="description">Search and select multiple FAQs.</p>
+                            <input type="text" readonly class="faq-select-field" placeholder="Click to select FAQs" style="width:100%; cursor:pointer;" />
+                            <input type="hidden" name="faq_ids[]" id="faq-hidden-values">
+                            <p class="description">Click to select or add FAQs</p>
                         </td>
                     </tr>
                     <tr>

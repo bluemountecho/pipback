@@ -420,3 +420,148 @@ function handle_get_user_payment_method_details() {
         'data' => $response_data
     ]);
 }
+
+add_action('wp_ajax_load_add_faq_modal', 'handle_load_add_faq_modal');
+
+function handle_load_add_faq_modal() {
+    render_faqs_admin_page();
+
+    wp_die();
+}
+
+add_action('wp_ajax_load_faq_table', 'handle_load_faq_table');
+
+function handle_load_faq_table() {    
+    $faq_table_list = new Pip_Firm_FAQs_Table();
+
+    echo $faq_table_list->prepare_items();
+    echo $faq_table_list->display();
+
+    wp_die();
+}
+
+add_action('wp_ajax_save_faq', 'handle_save_faq');
+
+function handle_save_faq() {
+    global $wpdb;
+    
+    $table = $wpdb->prefix . 'firm_faqs';
+    
+    if (isset($_POST['faq_nonce']) && wp_verify_nonce($_POST['faq_nonce'], 'save_faq')) {
+        if (!current_user_can('manage_options')) return;
+
+        $title     = sanitize_text_field($_POST['faq_title']);
+        $content   = wp_kses_post($_POST['faq_content']);
+        $group_id  = intval($_POST['group_id']);
+
+        if (!empty($title) && !empty($content) && $group_id > 0) {
+            if (!empty($_POST['faq_id'])) {
+                // EDIT mode
+                $id = intval($_POST['faq_id']);
+                $wpdb->update($table, [
+                    'title'    => $title,
+                    'content'  => $content,
+                    'group_id' => $group_id,
+                ], ['id' => $id]);
+
+                wp_send_json_success([
+                    'data' => null
+                ]);
+            } else {
+                // ADD mode
+                $wpdb->insert($table, [
+                    'title'    => $title,
+                    'content'  => $content,
+                    'group_id' => $group_id,
+                ]);
+
+                wp_send_json_success([
+                    'data' => null
+                ]);
+            }
+        }
+    }
+}
+
+add_action('wp_ajax_delete_faq', 'handle_delete_faq');
+
+function handle_delete_faq() {
+    if (
+        isset($_POST['id'])
+    ) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'firm_faqs';
+
+        $id = intval($_POST['id']);
+        $wpdb->delete($table, ['id' => $id]);
+    }
+
+    wp_die();
+}
+
+add_action('wp_ajax_load_add_faq_group_modal', 'handle_load_add_faq_group_modal');
+
+function handle_load_add_faq_group_modal() {
+    render_faq_groups_admin_page();
+
+    wp_die();
+}
+
+add_action('wp_ajax_load_faq_group_table', 'handle_load_faq_group_table');
+
+function handle_load_faq_group_table() {    
+    $faq_table_list = new Pip_Firm_FAQ_Groups_Table();
+
+    echo $faq_table_list->prepare_items();
+    echo $faq_table_list->display();
+
+    wp_die();
+}
+
+add_action('wp_ajax_save_faq_group', 'handle_save_faq_group');
+
+function handle_save_faq_group() {
+    global $wpdb;
+    $table = $wpdb->prefix . 'firm_faq_groups';
+
+    // Handle form submission
+    if (isset($_POST['faq_group_nonce']) && wp_verify_nonce($_POST['faq_group_nonce'], 'save_faq_group')) {
+        $firm_name = sanitize_text_field($_POST['firm_name']);
+        $group_title = sanitize_text_field($_POST['group_title']);
+        $group_id = isset($_POST['group_id']) ? intval($_POST['group_id']) : 0;
+
+        if (!empty($firm_name) && !empty($group_title)) {
+            if ($group_id > 0) {
+                $wpdb->update($table, [
+                    'firm_name' => $firm_name,
+                    'title'     => $group_title,
+                ], ['id' => $group_id]);
+            } else {
+                $wpdb->insert($table, [
+                    'firm_name' => $firm_name,
+                    'title'     => $group_title,
+                ]);
+            }
+        }
+    }
+
+    wp_send_json_success([
+        'data' => null
+    ]);
+}
+
+add_action('wp_ajax_delete_faq_group', 'handle_delete_faq_group');
+
+function handle_delete_faq_group() {
+    if (
+        isset($_POST['id'])
+    ) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'firm_faq_groups';
+
+        $id = intval($_POST['id']);
+        $wpdb->delete($table, ['id' => $id]);
+    }
+
+    wp_die();
+}

@@ -40,10 +40,10 @@ function render_faq_groups_admin_page() {
     $groups = $wpdb->get_results("SELECT * FROM $table ORDER BY firm_name ASC, title ASC", ARRAY_A);
 
     // If editing
-    $editing = isset($_GET['edit_group']);
+    $editing = isset($_POST['edit_group']);
     $edit_group = ['id' => '', 'firm_name' => '', 'title' => ''];
     if ($editing) {
-        $edit_id = intval($_GET['edit_group']);
+        $edit_id = intval($_POST['edit_group']);
         $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $edit_id), ARRAY_A);
         if ($row) {
             $edit_group = $row;
@@ -53,7 +53,8 @@ function render_faq_groups_admin_page() {
 
     <div class="wrap">
         <h1><?php echo $editing ? 'Edit FAQ Group' : 'Add New FAQ Group'; ?></h1>
-        <form method="post">
+        <form method="post" id="save-faq-group-form">
+            <input type="hidden" value="save_faq_group" name="action" />
             <?php wp_nonce_field('save_faq_group', 'faq_group_nonce'); ?>
             <?php if ($editing): ?>
                 <input type="hidden" name="group_id" value="<?php echo esc_attr($edit_group['id']); ?>">
@@ -69,25 +70,44 @@ function render_faq_groups_admin_page() {
                 </tr>
             </table>
             <div style="display: flex; align-items: baseline; gap: 10px;">
-                <?php submit_button($editing ? 'Update Group' : 'Add Group'); ?>
-                <?php if ($editing): ?>
-                    <a href="<?php echo esc_url(admin_url('admin.php?page=pipback-firm-faq-groups')); ?>" class="button">Cancel</a>
-                <?php endif; ?>
+                <button class="button button-primary"><?php echo $editing ? 'Update Group' : 'Add Group'; ?></button>
+                <button type="button" class="button" id="close-edit-faq-modal">Cancel</button>
             </div>
         </form>
     </div>
+<script>
+jQuery(function($){
+    $('#close-edit-faq-modal').on('click', function () {
+        $('#edit-faq-group-modal').fadeOut();
+    })
 
-    <div class="wrap">
-        <h2>All FAQ Groups</h2>
-        <form method="post">
-            <?php
-            $faq_groups_table = new Pip_Firm_FAQ_Groups_Table();
-            $faq_groups_table->prepare_items();
-            $faq_groups_table->display();
-            ?>
-        </form>
-    </div>
+    $('#save-faq-group-form').on('submit', function (e) {
+        e.preventDefault();
+        const form = $(this);
+        const message = $('#faq-message').text('Saving...');
 
-
+        $.post(ajaxurl, form.serialize(), function(res) {
+            console.log(res)
+            if (res.success) {
+                $('#edit-faq-group-modal').fadeOut();
+                $.ajax({
+                    url: ajaxurl,
+                    method: 'POST',
+                    data: {
+                        action: 'load_faq_group_table',
+                    },
+                    success: function (response) {
+                        $('#faq-group-table-div').html(response);
+                    }
+                });
+            } else {
+                message.css('color', 'red').text(res.data?.message || 'Error.');
+            }
+        }).fail(function() {
+            message.css('color', 'red').text('AJAX error.');
+        });
+    })
+});
+</script>
     <?php
 }
