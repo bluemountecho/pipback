@@ -71,16 +71,12 @@ function render_faq_groups_admin_page() {
             </table>
             <div style="display: flex; align-items: baseline; gap: 10px;">
                 <button class="button button-primary"><?php echo $editing ? 'Update Group' : 'Add Group'; ?></button>
-                <button type="button" class="button" id="close-edit-faq-modal">Cancel</button>
+                <button type="button" class="button" id="close-edit-faq-group-modal">Cancel</button>
             </div>
         </form>
     </div>
 <script>
 jQuery(function($){
-    $('#close-edit-faq-modal').on('click', function () {
-        $('#edit-faq-group-modal').fadeOut();
-    })
-
     $('#save-faq-group-form').on('submit', function (e) {
         e.preventDefault();
         const form = $(this);

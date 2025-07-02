@@ -1,6 +1,7 @@
 <?php
 
-function render_faqs_admin_page() {
+function render_faqs_admin_page()
+{
     global $wpdb;
 
     $table = $wpdb->prefix . 'firm_faqs';
@@ -42,8 +43,7 @@ function render_faqs_admin_page() {
                         <select name="group_id" id="group_id" required>
                             <option value="">Select Group</option>
                             <?php foreach ($groups as $group): ?>
-                                <option value="<?php echo esc_attr($group['id']); ?>"
-                                    <?php selected($faq_data['group_id'], $group['id']); ?>>
+                                <option value="<?php echo esc_attr($group['id']); ?>" <?php selected($faq_data['group_id'], $group['id']); ?>>
                                     <?php echo esc_html($group['title']); ?>
                                 </option>
                             <?php endforeach; ?>
@@ -53,12 +53,12 @@ function render_faqs_admin_page() {
                 <tr>
                     <th><label for="faq_title" style="padding: 0 1rem">Title</label></th>
                     <td><input type="text" name="faq_title" id="faq_title" class="regular-text" required
-                        value="<?php echo esc_attr($faq_data['title']); ?>"></td>
+                            value="<?php echo esc_attr($faq_data['title']); ?>"></td>
                 </tr>
                 <tr>
                     <th><label for="faq_content" style="padding: 0 1rem">Content</label></th>
                     <td>
-                        <?php 
+                        <?php
                         wp_editor(
                             $faq_data['content'],
                             'faq_content',
@@ -66,8 +66,8 @@ function render_faqs_admin_page() {
                                 'textarea_name' => 'faq_content',
                                 'media_buttons' => false,
                                 'textarea_rows' => 10,
-                                'teeny'         => false,
-                                'quicktags'     => true,
+                                'teeny' => false,
+                                'quicktags' => true,
                             ]
                         );
                         ?>
@@ -81,38 +81,44 @@ function render_faqs_admin_page() {
             </div>
         </form>
     </div>
-<script>
-jQuery(function($){
-    $('#close-edit-faq-modal').on('click', function () {
-        $('#edit-faq-modal').fadeOut();
-    })
+    <script>
+        jQuery(function ($) {
+            function refreshCheckboxes() {
+                let selectedIds = $('#faq-hidden-values').val().split(',').filter(id => id);
 
-    $('#save-faq-form').on('submit', function (e) {
-        e.preventDefault();
-        const form = $(this);
-        const message = $('#faq-message').text('Saving...');
-
-        $.post(ajaxurl, form.serialize(), function(res) {
-            if (res.success) {
-                $('#edit-faq-modal').fadeOut();
-                $.ajax({
-                    url: ajaxurl,
-                    method: 'POST',
-                    data: {
-                        action: 'load_faq_table',
-                    },
-                    success: function (response) {
-                        $('#faq-table-div').html(response);
-                    }
+                $('.faq-checkbox').each(function () {
+                    const id = $(this).val();
+                    $(this).prop('checked', selectedIds.includes(id));
                 });
-            } else {
-                message.css('color', 'red').text(res.data?.message || 'Error.');
             }
-        }).fail(function() {
-            message.css('color', 'red').text('AJAX error.');
+
+            $('#save-faq-form').on('submit', function (e) {
+                e.preventDefault();
+                const form = $(this);
+                const message = $('#faq-message').text('Saving...');
+
+                $.post(ajaxurl, form.serialize(), function (res) {
+                    if (res.success) {
+                        $('#edit-faq-modal').fadeOut();
+                        $.ajax({
+                            url: ajaxurl,
+                            method: 'POST',
+                            data: {
+                                action: 'load_faq_table',
+                            },
+                            success: function (response) {
+                                $('#faq-table-div').html(response);
+                                refreshCheckboxes();
+                            }
+                        });
+                    } else {
+                        message.css('color', 'red').text(res.data?.message || 'Error.');
+                    }
+                }).fail(function () {
+                    message.css('color', 'red').text('AJAX error.');
+                });
+            })
         });
-    })
-});
-</script>
+    </script>
     <?php
 }

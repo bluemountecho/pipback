@@ -2,7 +2,8 @@
 
 add_action('wp_ajax_pipback_cashback_action', 'pipback_cashback_action_handler');
 
-function pipback_cashback_action_handler() {
+function pipback_cashback_action_handler()
+{
     if (!current_user_can('manage_options') || !current_user_can('manage_cashback_requests')) {
         wp_send_json_error('Unauthorized');
     }
@@ -13,11 +14,11 @@ function pipback_cashback_action_handler() {
     $action = sanitize_text_field($_POST['sub_action']);
     $amount = isset($_POST['amount']) ? floatval($_POST['amount']) : 0.0;
     $request = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
-    
+
     if (!$request) {
         wp_send_json_error('Request not found');
     }
-    
+
     $user_id = $request->user_id;
     $fund_id = isset($_POST['fund_id']) ? intval($_POST['fund_id']) : $request->fund_id;
     $user_email = get_userdata($user_id)->user_email;
@@ -42,8 +43,8 @@ function pipback_cashback_action_handler() {
 
         $analysis_table = $wpdb->prefix . 'pip_offer_clicks';
         $wpdb->insert($analysis_table, [
-            'fund_id'    => $fund_id,
-            'user_id'    => $user_id ? $user_id : null,
+            'fund_id' => $fund_id,
+            'user_id' => $user_id ? $user_id : null,
             'ip_address' => "-",
             'user_agent' => "-",
             'converted' => 1,
@@ -53,15 +54,15 @@ function pipback_cashback_action_handler() {
         $to = $user_email;
         $subject = 'Cashback Request Approved';
         $headers = ['Content-Type: text/html; charset=UTF-8'];
-        $amount_string = $amount.'$';
+        $amount_string = $amount . '$';
         $current_user = $user;
 
         $template_path = get_stylesheet_directory() . '/emails/views/cashback-request-approved.php';
-        
+
         ob_start();
         include $template_path;
         $message = ob_get_clean();
-        
+
         $sent = wp_mail($to, $subject, $message, $headers);
 
         // $affiliate_id = get_user_meta($user_id, '_referred_by_affiliate_id', true);
@@ -81,22 +82,22 @@ function pipback_cashback_action_handler() {
         //     }
         // }
 
-        $referral = affwp_get_referral_by( 'reference', $user_id, 'user_registration' );
+        $referral = affwp_get_referral_by('reference', $user_id, 'user_registration');
 
-        if ( $referral && $referral->affiliate_id && $amount > 0 ) {
+        if ($referral && $referral->affiliate_id && $amount > 0) {
             $affiliate_id = $referral->affiliate_id;
 
             $referral_id = affwp_add_referral([
                 'affiliate_id' => $affiliate_id,
-                'reference'    => $user_id,
-                'description'  => 'Cashback Earned',
-                'amount'       => $amount,
-                'context'      => 'cashback',
-                'status'       => 'unpaid',
+                'reference' => $user_id,
+                'description' => 'Cashback Earned',
+                'amount' => $amount,
+                'context' => 'cashback',
+                'status' => 'unpaid',
             ]);
 
-            if ( $referral_id ) {
-                affwp_set_referral_status( $referral_id, 'paid' );
+            if ($referral_id) {
+                affwp_set_referral_status($referral_id, 'paid');
             }
         }
     } elseif ($action === 'decline') {
@@ -134,7 +135,8 @@ function pipback_cashback_action_handler() {
 
 add_action('wp_ajax_pipback_withdrawal_action', 'pipback_withdrawal_action_handler');
 
-function pipback_withdrawal_action_handler() {
+function pipback_withdrawal_action_handler()
+{
     if (!current_user_can('manage_options')) {
         wp_send_json_error('Unauthorized');
     }
@@ -155,7 +157,7 @@ function pipback_withdrawal_action_handler() {
     }
 
     $user_id = $request->user_id;
-    $amount  = floatval($request->amount);
+    $amount = floatval($request->amount);
     $user = get_userdata($user_id);
     $user_email = get_userdata($user_id)->user_email;
 
@@ -183,16 +185,16 @@ function pipback_withdrawal_action_handler() {
             $headers = ['Content-Type: text/html; charset=UTF-8'];
 
             $template_path = get_stylesheet_directory() . '/emails/views/withdrawal-request-approved.php';
-            $formatted = number_format((float)$amount, 2, '.', '');
+            $formatted = number_format((float) $amount, 2, '.', '');
             list($intPart, $decimalPart) = explode('.', $formatted);
             $price_full = '$' . $intPart;
             $price_float = '.' . $decimalPart;
-            
+
             $payment_detail = 'FSafWFFawf54f65#@F5fASDDAS#R#RWEDsad664=r3jhkyr[=i3';
             $payment_detail = strlen($payment_detail) > 30 ? substr($payment_detail, 0, 30) . '...' : $payment_detail;
             $payment_method = $request->payment_method;
             $current_user = $user;
-            
+
             ob_start();
             include $template_path;
             $message = ob_get_clean();
@@ -216,7 +218,7 @@ function pipback_withdrawal_action_handler() {
         $template_path = get_stylesheet_directory() . '/emails/views/withdrawal-request-declined.php';
         $reason = $deny_reason;
         $current_user = $user;
-        
+
         ob_start();
         include $template_path;
         $message = ob_get_clean();
@@ -237,10 +239,11 @@ function pipback_withdrawal_action_handler() {
 }
 
 
-function pipback_ajax_update_user_balance() {
+function pipback_ajax_update_user_balance()
+{
     check_ajax_referer('update_balance_nonce', 'security');
 
-     if (!current_user_can('edit_users') || !check_ajax_referer('update_balance_nonce', 'security', false)) {
+    if (!current_user_can('edit_users') || !check_ajax_referer('update_balance_nonce', 'security', false)) {
         wp_send_json_error(['message' => 'Permission denied or nonce failed']);
     }
 
@@ -280,7 +283,8 @@ function pipback_ajax_update_user_balance() {
 add_action('wp_ajax_update_user_balance_ajax', 'pipback_ajax_update_user_balance');
 
 
-function ensure_cashback_log_table_schema_updated() {
+function ensure_cashback_log_table_schema_updated()
+{
     global $wpdb;
     $table = $wpdb->prefix . 'cashback_move_log';
 
@@ -312,9 +316,10 @@ function ensure_cashback_log_table_schema_updated() {
 }
 
 add_action('wp_ajax_save_pipfunds_order', 'save_pipfunds_order');
-function save_pipfunds_order() {
+function save_pipfunds_order()
+{
     check_ajax_referer('pipfunds_order_nonce', 'nonce');
-    
+
     if (!current_user_can('manage_options')) {
         wp_send_json_error('Unauthorized');
     }
@@ -339,30 +344,30 @@ function save_pipfunds_order() {
     wp_send_json_success();
 }
 
-add_action('wp_ajax_pipback_get_all_user_requests', function() {
+add_action('wp_ajax_pipback_get_all_user_requests', function () {
     global $wpdb;
-    
+
     $request_id = intval($_POST['request_id']);
-    
+
     if (!$request_id) {
         wp_send_json_error('Invalid request ID');
         return;
     }
-    
+
     $table = $wpdb->prefix . 'cashbackrequests';
     $funds_table = $wpdb->prefix . 'pipfunds';
-    
+
     // First get the user ID from the current request
     $user_id = $wpdb->get_var($wpdb->prepare(
         "SELECT user_id FROM $table WHERE id = %d",
         $request_id
     ));
-    
+
     if (!$user_id) {
         wp_send_json_error('Request not found');
         return;
     }
-    
+
     // Then get all requests for this user
     $results = $wpdb->get_results($wpdb->prepare(
         "SELECT r.*, f.title as fund_title 
@@ -372,50 +377,51 @@ add_action('wp_ajax_pipback_get_all_user_requests', function() {
          ORDER BY r.created_at DESC",
         $user_id
     ), ARRAY_A);
-    
+
     wp_send_json_success($results);
 });
 
 
 add_action('wp_ajax_get_user_payment_method_details', 'handle_get_user_payment_method_details');
-function handle_get_user_payment_method_details() {
+function handle_get_user_payment_method_details()
+{
     check_ajax_referer('get_user_payment_method_details', 'nonce');
     $user_id = isset($_POST['user_id']) ? absint($_POST['user_id']) : 0;
     $payment_method = isset($_POST['payment_method']) ? sanitize_text_field($_POST['payment_method']) : '';
-    
+
     if (!$user_id || !$payment_method) {
         wp_send_json_error([
             'message' => 'Missing required parameters'
         ], 400);
     }
-    
+
     global $wpdb;
-    
+
     $result = $wpdb->get_row($wpdb->prepare(
         "SELECT method_data FROM {$wpdb->prefix}user_payment_methods 
          WHERE user_id = %d",
         $user_id,
     ));
-    
+
     $method_data = json_decode($result->method_data, true);
-    
+
     if (!isset($method_data[$payment_method])) {
         wp_send_json_error([
             'message' => 'Payment method not found for this user'
         ], 404);
     }
-    
+
     if (!$result) {
         wp_send_json_error([
             'message' => 'Payment method not found for this user'
         ], 404);
     }
-    
+
     $response_data = [
         'method_data' => $method_data[$payment_method]
     ];
-    
-    
+
+
     wp_send_json_success([
         'data' => $response_data
     ]);
@@ -423,7 +429,8 @@ function handle_get_user_payment_method_details() {
 
 add_action('wp_ajax_load_add_faq_modal', 'handle_load_add_faq_modal');
 
-function handle_load_add_faq_modal() {
+function handle_load_add_faq_modal()
+{
     render_faqs_admin_page();
 
     wp_die();
@@ -431,7 +438,8 @@ function handle_load_add_faq_modal() {
 
 add_action('wp_ajax_load_faq_table', 'handle_load_faq_table');
 
-function handle_load_faq_table() {    
+function handle_load_faq_table()
+{
     $faq_table_list = new Pip_Firm_FAQs_Table();
 
     echo $faq_table_list->prepare_items();
@@ -442,25 +450,27 @@ function handle_load_faq_table() {
 
 add_action('wp_ajax_save_faq', 'handle_save_faq');
 
-function handle_save_faq() {
+function handle_save_faq()
+{
     global $wpdb;
-    
-    $table = $wpdb->prefix . 'firm_faqs';
-    
-    if (isset($_POST['faq_nonce']) && wp_verify_nonce($_POST['faq_nonce'], 'save_faq')) {
-        if (!current_user_can('manage_options')) return;
 
-        $title     = sanitize_text_field($_POST['faq_title']);
-        $content   = wp_kses_post($_POST['faq_content']);
-        $group_id  = intval($_POST['group_id']);
+    $table = $wpdb->prefix . 'firm_faqs';
+
+    if (isset($_POST['faq_nonce']) && wp_verify_nonce($_POST['faq_nonce'], 'save_faq')) {
+        if (!current_user_can('manage_options'))
+            return;
+
+        $title = sanitize_text_field($_POST['faq_title']);
+        $content = wp_kses_post($_POST['faq_content']);
+        $group_id = intval($_POST['group_id']);
 
         if (!empty($title) && !empty($content) && $group_id > 0) {
             if (!empty($_POST['faq_id'])) {
                 // EDIT mode
                 $id = intval($_POST['faq_id']);
                 $wpdb->update($table, [
-                    'title'    => $title,
-                    'content'  => $content,
+                    'title' => $title,
+                    'content' => $content,
                     'group_id' => $group_id,
                 ], ['id' => $id]);
 
@@ -470,8 +480,8 @@ function handle_save_faq() {
             } else {
                 // ADD mode
                 $wpdb->insert($table, [
-                    'title'    => $title,
-                    'content'  => $content,
+                    'title' => $title,
+                    'content' => $content,
                     'group_id' => $group_id,
                 ]);
 
@@ -485,15 +495,18 @@ function handle_save_faq() {
 
 add_action('wp_ajax_delete_faq', 'handle_delete_faq');
 
-function handle_delete_faq() {
+function handle_delete_faq()
+{
     if (
-        isset($_POST['id'])
+        isset($_POST['ids'])
     ) {
         global $wpdb;
+        
         $table = $wpdb->prefix . 'firm_faqs';
 
-        $id = intval($_POST['id']);
-        $wpdb->delete($table, ['id' => $id]);
+        foreach ($_POST['ids'] as $id) {
+            $wpdb->delete($table, ['id' => intval($id)]);
+        }
     }
 
     wp_die();
@@ -501,7 +514,8 @@ function handle_delete_faq() {
 
 add_action('wp_ajax_load_add_faq_group_modal', 'handle_load_add_faq_group_modal');
 
-function handle_load_add_faq_group_modal() {
+function handle_load_add_faq_group_modal()
+{
     render_faq_groups_admin_page();
 
     wp_die();
@@ -509,7 +523,8 @@ function handle_load_add_faq_group_modal() {
 
 add_action('wp_ajax_load_faq_group_table', 'handle_load_faq_group_table');
 
-function handle_load_faq_group_table() {    
+function handle_load_faq_group_table()
+{
     $faq_table_list = new Pip_Firm_FAQ_Groups_Table();
 
     echo $faq_table_list->prepare_items();
@@ -520,7 +535,8 @@ function handle_load_faq_group_table() {
 
 add_action('wp_ajax_save_faq_group', 'handle_save_faq_group');
 
-function handle_save_faq_group() {
+function handle_save_faq_group()
+{
     global $wpdb;
     $table = $wpdb->prefix . 'firm_faq_groups';
 
@@ -534,12 +550,12 @@ function handle_save_faq_group() {
             if ($group_id > 0) {
                 $wpdb->update($table, [
                     'firm_name' => $firm_name,
-                    'title'     => $group_title,
+                    'title' => $group_title,
                 ], ['id' => $group_id]);
             } else {
                 $wpdb->insert($table, [
                     'firm_name' => $firm_name,
-                    'title'     => $group_title,
+                    'title' => $group_title,
                 ]);
             }
         }
@@ -552,15 +568,17 @@ function handle_save_faq_group() {
 
 add_action('wp_ajax_delete_faq_group', 'handle_delete_faq_group');
 
-function handle_delete_faq_group() {
+function handle_delete_faq_group()
+{
     if (
-        isset($_POST['id'])
+        isset($_POST['ids'])
     ) {
         global $wpdb;
         $table = $wpdb->prefix . 'firm_faq_groups';
 
-        $id = intval($_POST['id']);
-        $wpdb->delete($table, ['id' => $id]);
+        foreach ($_POST['ids'] as $id) {
+            $wpdb->delete($table, ['id' => intval($id)]);
+        }
     }
 
     wp_die();
